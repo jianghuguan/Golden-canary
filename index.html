@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>深渊回响</title>
+    <style>
+        /* CSS样式：决定游戏长什么样 */
+        body {
+            background-color: #1a1a1a;
+            color: #e0e0e0;
+            font-family: 'Courier New', Courier, monospace; /* 模拟像素字体感 */
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            height: 100vh;
+            overflow: hidden;
+        }
+        #game-container {
+            width: 100%;
+            max-width: 480px; /* 限制最大宽度，模拟手机竖屏 */
+            height: 100%;
+            background-color: #000;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            border-left: 1px solid #333;
+            border-right: 1px solid #333;
+        }
+        /* 上半部分：画面区 */
+        #visual-area {
+            flex: 1; /* 占据上半部分 */
+            background-color: #222;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            overflow: hidden;
+        }
+        #scene-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            image-rendering: pixelated; /* 像素画风格放大不模糊 */
+        }
+        #player-avatar {
+            position: absolute;
+            bottom: 20px;
+            width: 64px;
+            height: 64px;
+            image-rendering: pixelated;
+            z-index: 10;
+        }
+        
+        /* 下半部分：文本和操作区 */
+        #text-area {
+            flex: 1; /* 占据下半部分 */
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            border-top: 2px solid #555;
+            background-color: #111;
+        }
+        #dialogue-box {
+            flex-grow: 1;
+            font-size: 16px;
+            line-height: 1.6;
+            margin-bottom: 20px;
+            overflow-y: auto;
+        }
+        .btn-group {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 10px;
+        }
+        button {
+            background: #333;
+            color: white;
+            border: 1px solid #666;
+            padding: 15px;
+            font-family: inherit;
+            font-size: 16px;
+            cursor: pointer;
+            text-align: left;
+        }
+        button:active {
+            background: #555;
+        }
+
+        /* 顶部菜单栏 */
+        #top-bar {
+            position: absolute;
+            top: 0;
+            width: 100%;
+            padding: 5px;
+            display: flex;
+            justify-content: flex-end;
+            z-index: 100;
+        }
+        .small-btn {
+            background: rgba(0,0,0,0.5);
+            padding: 5px 10px;
+            font-size: 12px;
+            margin-right: 10px;
+        }
+
+        /* 简单的占位符颜色，之后你可以换成AI生成的图片 */
+        .placeholder-bg { background: linear-gradient(to bottom, #2b32b2, #1488cc); }
+        .placeholder-pit { background: linear-gradient(to bottom, #000000, #434343); }
+        .placeholder-altar { background: linear-gradient(to bottom, #4b0000, #000000); }
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    <!-- 顶部功能栏 -->
+    <div id="top-bar">
+        <button class="small-btn" onclick="saveGame()">保存</button>
+        <button class="small-btn" onclick="loadGame()">读取</button>
+        <button class="small-btn" onclick="restart()">重开</button>
+    </div>
+
+    <!-- 画面区 -->
+    <div id="visual-area" class="placeholder-pit">
+        <!-- 场景图 -->
+        <div id="scene-bg" style="width:100%; height:100%;"></div>
+        <!-- 像素小人 -->
+        <img id="player-avatar" src="" style="display:none;"> 
+        <!-- 如果没有图片，先用文字代替 -->
+        <div id="visual-text" style="color: #666; position:absolute;">(场景画面)</div>
+    </div>
+
+    <!-- 文本区 -->
+    <div id="text-area">
+        <div id="dialogue-box">游戏加载中...</div>
+        <div class="btn-group" id="choices"></div>
+    </div>
+</div>
+
+<script>
+    // --- 游戏数据 ---
+    let gameState = {
+        scene: 'start',
+        inventory: [],
+        avatar: null
+    };
+
+    // --- 剧本配置 (这里是你主要需要修改的地方) ---
+    const scenes = {
+        'start': {
+            text: "请选择你的角色形象...",
+            bgClass: 'placeholder-bg', 
+            choices: [
+                { text: "我是红衣冒险者", action: () => selectAvatar('red') },
+                { text: "我是蓝衣法师", action: () => selectAvatar('blue') }
+            ]
+        },
+        'pit_wakeup': {
+            text: "你猛然惊醒，浑身酸痛。抬头望去，头顶只有一线微弱的天光。\n\n你发现自己身处一个巨大的深坑底部，四周的岩壁湿滑陡峭，周围遍布着半人高的杂草和纠缠的藤蔓。",
+            bgClass: 'placeholder-pit',
+            choices: [
+                { text: "查看四周", target: 'explore_pit' }
+            ]
+        },
+        'explore_pit': {
+            text: "你拨开面前茂密的杂草，手指触碰到了一些坚硬冰凉的东西。\n\n这是一个看起来已经废弃了数百年的古老祭坛，大半个祭坛都被埋在土里。你用力扒开覆盖在上面的枯藤...",
+            bgClass: 'placeholder-pit',
+            choices: [
+                { text: "仔细观察祭坛", target: 'examine_altar' }
+            ]
+        },
+        'examine_altar': {
+            text: "藤蔓散去，显露出石头砌成的底座。令人不安的是，祭坛表面布满了用某种深红色颜料绘制的复杂纹路。虽然年代久远，但那红色依然鲜艳得刺眼，仿佛是刚画上去的。",
+            bgClass: 'placeholder-altar',
+            choices: [
+                { text: "触摸纹路", target: 'touch_rune' },
+                { text: "离开这里", target: 'leave_altar' }
+            ]
+        },
+        'touch_rune': {
+            text: "（未完待续...这只是个演示）",
+            choices: [
+                { text: "重新开始", action: () => restart() }
+            ]
+        },
+        'leave_altar': {
+             text: "你决定离这个诡异的东西远一点。",
+             choices: [
+                 { text: "寻找出口", target: 'touch_rune' }
+             ]
+        }
+    };
+
+    // --- 核心逻辑 ---
+
+    function renderScene(sceneId) {
+        // 如果传入的是scene对象里的key
+        const sceneData = scenes[sceneId];
+        if (!sceneData) return;
+
+        gameState.scene = sceneId;
+
+        // 更新文本
+        const dialogueBox = document.getElementById('dialogue-box');
+        dialogueBox.innerText = sceneData.text;
+
+        // 更新背景 (这里暂时用CSS颜色代替，以后你可以换成 img src)
+        const visualArea = document.getElementById('visual-area');
+        visualArea.className = sceneData.bgClass || '';
+        
+        // 更新小人显示
+        const avatarImg = document.getElementById('player-avatar');
+        if (gameState.avatar) {
+            avatarImg.style.display = 'block';
+            // 这里用简单的色块模拟小人，实际中你会替换成 <img src="base64...">
+            avatarImg.style.backgroundColor = gameState.avatar === 'red' ? '#e74c3c' : '#3498db';
+        } else {
+            avatarImg.style.display = 'none';
+        }
+
+        // 生成按钮
+        const choicesDiv = document.getElementById('choices');
+        choicesDiv.innerHTML = ''; // 清空旧按钮
+        
+        if (sceneData.choices) {
+            sceneData.choices.forEach(choice => {
+                const btn = document.createElement('button');
+                btn.innerText = choice.text;
+                btn.onclick = () => {
+                    if (choice.action) choice.action();
+                    if (choice.target) renderScene(choice.target);
+                };
+                choicesDiv.appendChild(btn);
+            });
+        }
+    }
+
+    function selectAvatar(type) {
+        gameState.avatar = type;
+        renderScene('pit_wakeup');
+    }
+
+    // --- 存档系统 ---
+    function saveGame() {
+        localStorage.setItem('abyss_save', JSON.stringify(gameState));
+        alert('游戏已保存');
+    }
+
+    function loadGame() {
+        const saved = localStorage.getItem('abyss_save');
+        if (saved) {
+            gameState = JSON.parse(saved);
+            renderScene(gameState.scene);
+        } else {
+            alert('没有存档');
+        }
+    }
+
+    function restart() {
+        if(confirm("确定要重开吗？")) {
+            gameState.scene = 'start';
+            gameState.avatar = null;
+            renderScene('start');
+        }
+    }
+
+    // 启动游戏
+    // 检查是否有自动存档（可选），这里默认直接开始
+    renderScene('start');
+
+</script>
+</body>
+</html>
