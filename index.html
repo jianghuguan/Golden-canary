@@ -3,228 +3,321 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>深渊回响</title>
+    <title>深渊回响 - Abyss Echo</title>
     <style>
-        /* CSS样式：决定游戏长什么样 */
+        /* ==================== 
+           CSS 样式表：决定游戏外观 
+           ==================== */
         body {
-            background-color: #1a1a1a;
-            color: #e0e0e0;
-            font-family: 'Courier New', Courier, monospace; /* 模拟像素字体感 */
+            background-color: #000;
+            color: #dcdcdc;
+            font-family: 'Courier New', Courier, monospace; /* 复古字体 */
             margin: 0;
             display: flex;
             justify-content: center;
             height: 100vh;
-            overflow: hidden;
+            overflow: hidden; /* 禁止页面整体滚动 */
         }
+
         #game-container {
             width: 100%;
-            max-width: 480px; /* 限制最大宽度，模拟手机竖屏 */
+            max-width: 450px; /* 限制宽度，模拟手机竖屏 */
             height: 100%;
-            background-color: #000;
+            background-color: #111;
             display: flex;
             flex-direction: column;
             position: relative;
             border-left: 1px solid #333;
             border-right: 1px solid #333;
+            box-shadow: 0 0 20px rgba(0,0,0,0.8);
         }
+
+        /* 顶部功能栏 */
+        #top-bar {
+            position: absolute;
+            top: 0;
+            width: 100%;
+            padding: 8px;
+            box-sizing: border-box;
+            display: flex;
+            justify-content: flex-end;
+            z-index: 100;
+            background: linear-gradient(to bottom, rgba(0,0,0,0.8), transparent);
+        }
+
+        .small-btn {
+            background: rgba(50, 50, 50, 0.8);
+            color: #aaa;
+            border: 1px solid #555;
+            padding: 4px 8px;
+            font-size: 12px;
+            margin-left: 8px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
         /* 上半部分：画面区 */
         #visual-area {
-            flex: 1; /* 占据上半部分 */
-            background-color: #222;
+            flex: 4; /* 画面占 4/10 */
+            background-color: #000;
             display: flex;
             justify-content: center;
             align-items: center;
             position: relative;
             overflow: hidden;
+            border-bottom: 4px solid #333;
         }
-        #scene-image {
+
+        /* SVG 容器，确保图片撑满 */
+        .svg-scene {
             width: 100%;
             height: 100%;
-            object-fit: cover;
-            image-rendering: pixelated; /* 像素画风格放大不模糊 */
+            display: block;
         }
+
+        /* 玩家头像 */
         #player-avatar {
             position: absolute;
-            bottom: 20px;
-            width: 64px;
-            height: 64px;
-            image-rendering: pixelated;
+            bottom: 10%;
+            width: 80px;
+            height: 80px;
+            image-rendering: pixelated; /* 像素风格不模糊 */
             z-index: 10;
+            filter: drop-shadow(0 4px 4px rgba(0,0,0,0.5));
+            transition: transform 0.3s ease;
         }
-        
+
         /* 下半部分：文本和操作区 */
         #text-area {
-            flex: 1; /* 占据下半部分 */
+            flex: 6; /* 文本占 6/10 */
             padding: 20px;
             display: flex;
             flex-direction: column;
-            border-top: 2px solid #555;
-            background-color: #111;
+            background-color: #1a1a1a;
         }
+
         #dialogue-box {
             flex-grow: 1;
             font-size: 16px;
             line-height: 1.6;
             margin-bottom: 20px;
-            overflow-y: auto;
+            overflow-y: auto; /* 文本太长可滚动 */
+            color: #eee;
+            text-shadow: 1px 1px 0 #000;
         }
+        
+        /* 关键文本高亮 */
+        .highlight { color: #e74c3c; font-weight: bold; }
+        .item-get { color: #f1c40f; font-weight: bold; }
+
+        /* 按钮组 */
         .btn-group {
             display: grid;
             grid-template-columns: 1fr;
-            gap: 10px;
+            gap: 12px;
         }
-        button {
-            background: #333;
+
+        button.choice-btn {
+            background: #2c3e50;
             color: white;
-            border: 1px solid #666;
-            padding: 15px;
+            border: 2px solid #34495e;
+            padding: 16px;
             font-family: inherit;
             font-size: 16px;
             cursor: pointer;
             text-align: left;
+            border-radius: 8px;
+            transition: background 0.2s;
         }
-        button:active {
-            background: #555;
-        }
-
-        /* 顶部菜单栏 */
-        #top-bar {
-            position: absolute;
-            top: 0;
-            width: 100%;
-            padding: 5px;
-            display: flex;
-            justify-content: flex-end;
-            z-index: 100;
-        }
-        .small-btn {
-            background: rgba(0,0,0,0.5);
-            padding: 5px 10px;
-            font-size: 12px;
-            margin-right: 10px;
+        
+        button.choice-btn:active {
+            background: #1abc9c;
+            border-color: #16a085;
+            transform: translateY(2px);
         }
 
-        /* 简单的占位符颜色，之后你可以换成AI生成的图片 */
-        .placeholder-bg { background: linear-gradient(to bottom, #2b32b2, #1488cc); }
-        .placeholder-pit { background: linear-gradient(to bottom, #000000, #434343); }
-        .placeholder-altar { background: linear-gradient(to bottom, #4b0000, #000000); }
+        /* 简单的淡入动画 */
+        .fade-in {
+            animation: fadeIn 0.5s;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
     </style>
 </head>
 <body>
 
 <div id="game-container">
-    <!-- 顶部功能栏 -->
+    <!-- 顶部菜单 -->
     <div id="top-bar">
-        <button class="small-btn" onclick="saveGame()">保存</button>
-        <button class="small-btn" onclick="loadGame()">读取</button>
-        <button class="small-btn" onclick="restart()">重开</button>
+        <button class="small-btn" onclick="saveGame()">保存进度</button>
+        <button class="small-btn" onclick="loadGame()">读取进度</button>
+        <button class="small-btn" onclick="restart()">重置</button>
     </div>
 
-    <!-- 画面区 -->
-    <div id="visual-area" class="placeholder-pit">
-        <!-- 场景图 -->
-        <div id="scene-bg" style="width:100%; height:100%;"></div>
-        <!-- 像素小人 -->
-        <img id="player-avatar" src="" style="display:none;"> 
-        <!-- 如果没有图片，先用文字代替 -->
-        <div id="visual-text" style="color: #666; position:absolute;">(场景画面)</div>
+    <!-- 画面 -->
+    <div id="visual-area">
+        <!-- 背景 SVG 将被插入这里 -->
     </div>
 
-    <!-- 文本区 -->
+    <!-- 文本与交互 -->
     <div id="text-area">
-        <div id="dialogue-box">游戏加载中...</div>
+        <div id="dialogue-box" class="fade-in">正在初始化深渊...</div>
         <div class="btn-group" id="choices"></div>
     </div>
 </div>
 
 <script>
-    // --- 游戏数据 ---
-    let gameState = {
-        scene: 'start',
-        inventory: [],
-        avatar: null
-    };
+    // ==========================================
+    // 1. 资源素材库 (SVG 代码)
+    // ==========================================
+    
+    // 场景：深坑 (仰视视角，黑暗，微光)
+    const img_pit = `
+    <svg class="svg-scene" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">
+        <defs>
+            <linearGradient id="grad_pit" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" style="stop-color:#111;stop-opacity:1" />
+                <stop offset="100%" style="stop-color:#000;stop-opacity:1" />
+            </linearGradient>
+        </defs>
+        <rect width="100" height="100" fill="url(#grad_pit)"/>
+        <!-- 岩壁 -->
+        <path d="M0,0 L30,0 L20,100 L0,100 Z" fill="#222"/>
+        <path d="M100,0 L70,0 L80,100 L100,100 Z" fill="#222"/>
+        <!-- 藤蔓 -->
+        <path d="M20,10 Q40,30 15,60 T25,90" stroke="#27ae60" stroke-width="2" fill="none"/>
+        <path d="M80,5 Q60,40 85,70 T75,95" stroke="#27ae60" stroke-width="2" fill="none"/>
+        <path d="M10,0 L15,40" stroke="#1e8449" stroke-width="3" fill="none"/>
+        <!-- 顶部微光 -->
+        <ellipse cx="50" cy="0" rx="40" ry="10" fill="#ecf0f1" opacity="0.1"/>
+    </svg>`;
 
-    // --- 剧本配置 (这里是你主要需要修改的地方) ---
+    // 场景：祭坛 (特写，诡异红光)
+    const img_altar = `
+    <svg class="svg-scene" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">
+        <rect width="100" height="100" fill="#1a1a1a"/>
+        <!-- 祭坛底座 -->
+        <rect x="10" y="40" width="80" height="60" fill="#34495e"/>
+        <rect x="5" y="40" width="90" height="5" fill="#2c3e50"/>
+        <!-- 红色符文 (发光效果) -->
+        <path d="M30,60 L50,85 L70,60 M50,50 L50,90 M30,75 L70,75" stroke="#c0392b" stroke-width="3" fill="none" opacity="0.8"/>
+        <!-- 杂草覆盖 -->
+        <path d="M10,100 L15,80 L20,100 M80,100 L85,85 L90,100" stroke="#27ae60" stroke-width="2" fill="none"/>
+    </svg>`;
+
+    // 角色：红衣勇者 (Base64 SVG)
+    const avatar_red = `data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect width='16' height='16' fill='transparent'/><rect x='6' y='2' width='4' height='4' fill='%23f1c40f'/><rect x='5' y='6' width='6' height='8' fill='%23e74c3c'/><rect x='4' y='8' width='2' height='4' fill='%23c0392b'/><rect x='10' y='8' width='2' height='4' fill='%23c0392b'/><rect x='4' y='14' width='3' height='2' fill='%23333'/><rect x='9' y='14' width='3' height='2' fill='%23333'/></svg>`;
+
+    // 角色：蓝衣法师 (Base64 SVG)
+    const avatar_blue = `data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect width='16' height='16' fill='transparent'/><rect x='6' y='3' width='4' height='3' fill='%23f1c40f'/><polygon points='4,2 12,2 8,0' fill='%233498db'/><rect x='5' y='6' width='6' height='9' fill='%233498db'/><rect x='11' y='6' width='1' height='10' fill='%23ecf0f1'/><rect x='5' y='15' width='6' height='1' fill='%232c3e50'/></svg>`;
+
+    // ==========================================
+    // 2. 游戏剧本配置 (Script)
+    // ==========================================
+    
+    // 你可以在这里无限扩展剧情
     const scenes = {
         'start': {
-            text: "请选择你的角色形象...",
-            bgClass: 'placeholder-bg', 
+            text: "【角色创建】\n\n深渊在呼唤你的名字...\n你要以什么身份开始这场冒险？",
+            visual: img_pit,
             choices: [
-                { text: "我是红衣冒险者", action: () => selectAvatar('red') },
-                { text: "我是蓝衣法师", action: () => selectAvatar('blue') }
+                { text: "我是红衣战士 (力量)", action: () => selectAvatar('red') },
+                { text: "我是蓝衣法师 (智慧)", action: () => selectAvatar('blue') }
             ]
         },
         'pit_wakeup': {
-            text: "你猛然惊醒，浑身酸痛。抬头望去，头顶只有一线微弱的天光。\n\n你发现自己身处一个巨大的深坑底部，四周的岩壁湿滑陡峭，周围遍布着半人高的杂草和纠缠的藤蔓。",
-            bgClass: 'placeholder-pit',
+            text: "你猛然惊醒，浑身酸痛。抬头望去，头顶只有一线微弱的天光，距离地面至少有百米之高。\n\n你发现自己身处一个巨大的深坑底部，四周的岩壁湿滑陡峭，周围遍布着半人高的杂草和纠缠的藤蔓。",
+            visual: img_pit,
+            choices: [
+                { text: "查看四周环境", target: 'explore_pit' },
+                { text: "检查随身物品", target: 'check_inventory' }
+            ]
+        },
+        'check_inventory': {
+            text: "你摸了摸口袋，除了一把生锈的匕首和一个干瘪的水袋，什么也没有。\n\n无论你是谁，现在你只是一个被困在深渊的可怜人。",
+            visual: img_pit,
             choices: [
                 { text: "查看四周", target: 'explore_pit' }
             ]
         },
         'explore_pit': {
             text: "你拨开面前茂密的杂草，手指触碰到了一些坚硬冰凉的东西。\n\n这是一个看起来已经废弃了数百年的古老祭坛，大半个祭坛都被埋在土里。你用力扒开覆盖在上面的枯藤...",
-            bgClass: 'placeholder-pit',
+            visual: img_pit,
             choices: [
-                { text: "仔细观察祭坛", target: 'examine_altar' }
+                { text: "挖掘祭坛", target: 'examine_altar' }
             ]
         },
         'examine_altar': {
-            text: "藤蔓散去，显露出石头砌成的底座。令人不安的是，祭坛表面布满了用某种深红色颜料绘制的复杂纹路。虽然年代久远，但那红色依然鲜艳得刺眼，仿佛是刚画上去的。",
-            bgClass: 'placeholder-altar',
+            text: "藤蔓散去，显露出石头砌成的底座。令人不安的是，祭坛表面布满了用某种<span class='highlight'>深红色颜料</span>绘制的复杂纹路。\n\n虽然年代久远，但那红色依然鲜艳得刺眼，仿佛是刚画上去的。",
+            visual: img_altar, // 切换图片
             choices: [
-                { text: "触摸纹路", target: 'touch_rune' },
-                { text: "离开这里", target: 'leave_altar' }
+                { text: "触摸那些纹路", target: 'touch_rune' },
+                { text: "远离这里，找别的路", target: 'leave_altar' }
             ]
         },
         'touch_rune': {
-            text: "（未完待续...这只是个演示）",
+            text: "当你指尖触碰到红色纹路时，一股刺骨的寒意瞬间钻入你的骨髓！\n\n祭坛深处传来了低沉的轰鸣声...\n\n(Demo 版本到此结束，感谢游玩)",
+            visual: img_altar,
             choices: [
                 { text: "重新开始", action: () => restart() }
             ]
         },
         'leave_altar': {
-             text: "你决定离这个诡异的东西远一点。",
+             text: "直觉告诉你，碰这个东西没有好下场。你退后几步，试图寻找其他的出口，但四周除了滑腻的岩壁什么也没有。",
+             visual: img_pit, // 切回深坑图
              choices: [
-                 { text: "寻找出口", target: 'touch_rune' }
+                 { text: "还是回去看看祭坛吧", target: 'examine_altar' }
              ]
         }
     };
 
-    // --- 核心逻辑 ---
+    // ==========================================
+    // 3. 游戏核心引擎 (Engine)
+    // ==========================================
+    
+    let gameState = {
+        scene: 'start',
+        inventory: [],
+        avatar: null
+    };
 
     function renderScene(sceneId) {
-        // 如果传入的是scene对象里的key
         const sceneData = scenes[sceneId];
         if (!sceneData) return;
-
+        
         gameState.scene = sceneId;
 
-        // 更新文本
-        const dialogueBox = document.getElementById('dialogue-box');
-        dialogueBox.innerText = sceneData.text;
+        // 1. 更新文本（带淡入效果）
+        const txtBox = document.getElementById('dialogue-box');
+        txtBox.classList.remove('fade-in');
+        void txtBox.offsetWidth; // 触发重绘
+        txtBox.innerHTML = sceneData.text; // 使用innerHTML支持颜色高亮
+        txtBox.classList.add('fade-in');
 
-        // 更新背景 (这里暂时用CSS颜色代替，以后你可以换成 img src)
+        // 2. 更新背景画面
         const visualArea = document.getElementById('visual-area');
-        visualArea.className = sceneData.bgClass || '';
+        // 只有当图片改变时才重绘，避免闪烁(简单版直接重绘)
+        // 清除除了avatar以外的元素
+        const oldAvatars = visualArea.querySelectorAll('#player-avatar');
+        visualArea.innerHTML = sceneData.visual || '';
         
-        // 更新小人显示
-        const avatarImg = document.getElementById('player-avatar');
+        // 3. 重新插入角色头像
         if (gameState.avatar) {
-            avatarImg.style.display = 'block';
-            // 这里用简单的色块模拟小人，实际中你会替换成 <img src="base64...">
-            avatarImg.style.backgroundColor = gameState.avatar === 'red' ? '#e74c3c' : '#3498db';
-        } else {
-            avatarImg.style.display = 'none';
+            const avatarImg = document.createElement('img');
+            avatarImg.id = 'player-avatar';
+            avatarImg.src = gameState.avatar === 'red' ? avatar_red : avatar_blue;
+            visualArea.appendChild(avatarImg);
         }
 
-        // 生成按钮
+        // 4. 生成选项按钮
         const choicesDiv = document.getElementById('choices');
-        choicesDiv.innerHTML = ''; // 清空旧按钮
-        
+        choicesDiv.innerHTML = ''; 
         if (sceneData.choices) {
             sceneData.choices.forEach(choice => {
                 const btn = document.createElement('button');
+                btn.className = 'choice-btn';
                 btn.innerText = choice.text;
                 btn.onclick = () => {
                     if (choice.action) choice.action();
@@ -237,36 +330,41 @@
 
     function selectAvatar(type) {
         gameState.avatar = type;
-        renderScene('pit_wakeup');
+        renderScene('pit_wakeup'); // 选完人直接跳到醒来场景
     }
 
-    // --- 存档系统 ---
+    // --- 存档功能 ---
     function saveGame() {
-        localStorage.setItem('abyss_save', JSON.stringify(gameState));
-        alert('游戏已保存');
+        try {
+            localStorage.setItem('abyss_echo_save', JSON.stringify(gameState));
+            alert('✅ 进度已保存');
+        } catch(e) {
+            alert('❌ 保存失败，可能是浏览器限制');
+        }
     }
 
     function loadGame() {
-        const saved = localStorage.getItem('abyss_save');
+        const saved = localStorage.getItem('abyss_echo_save');
         if (saved) {
             gameState = JSON.parse(saved);
             renderScene(gameState.scene);
         } else {
-            alert('没有存档');
+            alert('📭 没有找到存档');
         }
     }
 
     function restart() {
-        if(confirm("确定要重开吗？")) {
-            gameState.scene = 'start';
-            gameState.avatar = null;
+        if(confirm("确定要删除当前进度并重开吗？")) {
+            gameState = { scene: 'start', inventory: [], avatar: null };
             renderScene('start');
         }
     }
 
-    // 启动游戏
-    // 检查是否有自动存档（可选），这里默认直接开始
-    renderScene('start');
+    // 游戏启动
+    window.onload = () => {
+        // 可以在这里检查是否有自动存档
+        renderScene('start');
+    };
 
 </script>
 </body>
